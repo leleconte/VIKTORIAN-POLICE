@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHOST HEIST | Ultimate 3D Stealth</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Montserrat:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon: #00f2ff; --glass: rgba(255, 255, 255, 0.05); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; color: white; font-family: 'Montserrat', sans-serif; overflow: hidden; }
+        
+        /* UI OVERLAY */
+        #ui-layer { position: absolute; inset: 0; z-index: 100; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+
+        /* MENU & EDITOR */
+        #overlay-screen { display: flex; align-items: center; justify-content: center; height: 100%; background: radial-gradient(circle, #10101a 0%, #000 100%); transition: 0.5s; }
+        .panel { background: var(--glass); backdrop-filter: blur(20px); padding: 40px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; width: 400px; box-shadow: 0 0 50px rgba(0,0,0,1); }
+        
+        h1 { font-family: 'Orbitron'; font-size: 3rem; letter-spacing: 10px; color: var(--neon); margin: 0; text-shadow: 0 0 20px var(--neon); }
+        input, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid var(--neon); background: rgba(0,0,0,0.8); color: white; font-family: 'Orbitron'; box-sizing: border-box; }
+        button { background: var(--neon); color: black; cursor: pointer; transition: 0.3s; }
+        button:hover { box-shadow: 0 0 30px var(--neon); transform: scale(1.02); }
+
+        /* HUD */
+        #hud { position: absolute; top: 20px; left: 20px; display: none; pointer-events: none; }
+        .status-box { background: rgba(0,0,0,0.8); padding: 10px 20px; border-left: 5px solid var(--neon); margin-bottom: 5px; font-family: 'Orbitron'; font-size: 0.8rem; }
+
+        #game-canvas { position: absolute; inset: 0; z-index: 1; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div id="overlay-screen" class="interactive">
+            <div class="panel" id="step-login">
+                <h1>GHOST</h1>
+                <p>SHADOW OPERATIONS</p>
+                <input type="text" id="nick" placeholder="NICKNAME OPERATIVO">
+                <button onclick="toEditor()">AVVIA SISTEMA</button>
+            </div>
+
+            <div class="panel" id="step-editor" style="display:none">
+                <h2 style="font-family:Orbitron">CUSTOMIZE AGENT</h2>
+                <label>ALTEZZA</label>
+                <input type="range" id="range-h" min="0.7" max="1.4" step="0.05" value="1" oninput="updateLive()">
+                <label>MASSA</label>
+                <input type="range" id="range-b" min="0.6" max="1.6" step="0.05" value="1" oninput="updateLive()">
+                <label>COLORE TUTA</label>
+                <input type="color" id="color-p" value="#111111" oninput="updateLive()">
+                <button onclick="startGame()">INFILTRAZIONE</button>
+            </div>
+        </div>
+
+        <div id="hud">
+            <div class="status-box">AGENT: <span id="hud-nick">---</span></div>
+            <div class="status-box">GOAL: RUBA IL DIAMANTE</div>
+            <div class="status-box" id="risk-box" style="color:white">RISCHIO: MINIMO</div>
+        </div>
+    </div>
+
+    <div id="game-canvas"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, player, clock;
+        let guards = [];
+        let isPlaying = false;
+        const keys = { w: false, a: false, s: false, d: false };
+
+        function toEditor() {
+            const nick = document.getElementById('nick').value;
+            if(nick.length < 2) return alert("Inserisci un nickname!");
+            document.getElementById('hud-nick').innerText = nick.toUpperCase();
+            document.getElementById('step-login').style.display = 'none';
+            document.getElementById('step-editor').style.display = 'block';
+            init3D();
+        }
+
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020205);
+            clock = new THREE.Clock();
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('game-canvas').appendChild(renderer.domElement);
+
+            // LUCI
+            const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambient);
+            const point = new THREE.PointLight(0x00f2ff, 1, 50);
+            point.position.set(0, 10, 0);
+            scene.add(point);
+
+            // PLAYER (Capsule)
+            const geo = new THREE.CapsuleGeometry(0.4, 1, 4, 12);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            player = new THREE.Mesh(geo, mat);
+            player.position.y = 1.2;
+            player.castShadow = true;
+            scene.add(player);
+
+            // PAVIMENTO E MURI (La Casa)
+            createEnvironment();
+            
+            // GUARDIA
+            createGuard(10, -5);
+
+            camera.position.set(0, 5, 10);
+            animate();
+        }
+
+        function createEnvironment() {
+            // Pavimento
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshStandardMaterial({color: 0x0a0a0a}));
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Muri (Esempio di stanza)
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x151515 });
+            const wall1 = new THREE.Mesh(new THREE.BoxGeometry(20, 5, 0.5), wallMat);
+            wall1.position.set(0, 2.5, -10);
+            scene.add(wall1);
+
+            const grid = new THREE.GridHelper(50, 50, 0x00f2ff, 0x111111);
+            scene.add(grid);
+        }
+
+        function createGuard(x, z) {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1, 4, 8), new THREE.MeshStandardMaterial({color: 0xff0000}));
+            group.add(body);
+            
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(2, 5, 32), new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: 0.2}));
+            cone.rotation.x = Math.PI / 2;
+            cone.position.z = 2.5;
+            group.add(cone);
+
+            group.position.set(x, 1.2, z);
+            scene.add(group);
+            guards.push(group);
+        }
+
+        function updateLive() {
+            if(!player) return;
+            player.scale.y = document.getElementById('range-h').value;
+            player.scale.x = player.scale.z = document.getElementById('range-b').value;
+            player.material.color.set(document.getElementById('color-p').value);
+        }
+
+        function startGame() {
+            document.getElementById('overlay-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('overlay-screen').style.display = 'none';
+                document.getElementById('hud').style.display = 'block';
+                isPlaying = true;
+            }, 500);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if(isPlaying) {
+                // Movimento
+                const speed = 0.15;
+                if(keys.w) player.position.z -= speed;
+                if(keys.s) player.position.z += speed;
+                if(keys.a) player.position.x -= speed;
+                if(keys.d) player.position.x += speed;
+
+                // Telecamera segue giocatore
+                const targetCam = new THREE.Vector3(player.position.x, player.position.y + 4, player.position.z + 7);
+                camera.position.lerp(targetCam, 0.1);
+                camera.lookAt(player.position);
+
+                // IA Guardie
+                guards.forEach(g => {
+                    g.rotation.y += 0.01;
+                    const dist = player.position.distanceTo(g.position);
+                    if(dist < 3.5) {
+                        document.getElementById('risk-box').innerText = "RISCHIO: SCOPERTO!";
+                        document.getElementById('risk-box').style.color = "red";
+                    } else {
+                        document.getElementById('risk-box').innerText = "RISCHIO: MINIMO";
+                        document.getElementById('risk-box').style.color = "#00f2ff";
+                    }
+                });
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+    </script>
+</body>
+</html>
