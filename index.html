@@ -86,7 +86,7 @@
 
         input, select, textarea {
             width: 100%; background: #111; border: 1px solid var(--vsp-gold);
-            color: white; padding: 8px; margin: 10px 0;
+            color: white; padding: 8px; margin: 10px 0; box-sizing: border-box;
         }
     </style>
 </head>
@@ -100,6 +100,7 @@
         <div class="nav-link active" onclick="nav('home', this)">🏠 Dashboard</div>
         <div class="nav-link" onclick="nav('mdc', this)">📂 Database Sospetti</div>
         <div class="nav-link" onclick="nav('reports', this)">📝 Registro Verbali</div>
+        <div class="nav-link" onclick="nav('stats', this)">📊 Archivio Ore</div>
         <div class="nav-link" onclick="nav('radio', this)">📟 Comunicazioni</div>
     </div>
 
@@ -108,7 +109,16 @@
         <div id="home" class="section active">
             <h2>STATO OPERATIVO</h2>
             <div class="card">
-                <p>Agente: <strong style="color:var(--vsp-gold)">VSP-01</strong></p>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label>Nome Agente:</label>
+                        <input type="text" id="officerName" placeholder="Es: Mario">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Cognome Agente:</label>
+                        <input type="text" id="officerSurname" placeholder="Es: Rossi">
+                    </div>
+                </div>
                 <p>Status: <span id="dutyLabel">OFF-DUTY</span></p>
                 <p>Tempo in servizio: <span id="timer">00:00:00</span></p>
                 <button id="dutyBtn" class="vsp-button" onclick="toggleDuty()">Timbra Entrata</button>
@@ -126,28 +136,55 @@
         </div>
 
         <div id="reports" class="section">
-            <h2>REGISTRO RAPPORTI</h2>
+            <h2>REDAZIONE RAPPORTO DETTAGLIATO</h2>
             <div class="card">
-                <input type="text" id="repName" placeholder="Nome Soggetto">
-                <input type="text" id="repCrime" placeholder="Reato Commesso">
+                <label>Soggetto/i Coinvolti:</label>
+                <input type="text" id="repName" placeholder="Nome completo sospetto">
+                
+                <label>Categoria Reato:</label>
+                <select id="repCategory">
+                    <option>Codice della Strada</option>
+                    <option>Disturbo della Quiete</option>
+                    <option>Possesso di Sostanze</option>
+                    <option>Rapina/Furto</option>
+                    <option>Resistenza a Pubblico Ufficiale</option>
+                    <option>Altro (Specificare sotto)</option>
+                </select>
+
+                <label>Dettagli Intervento (Descrizione libera):</label>
+                <textarea id="repCrime" rows="5" placeholder="Inserire qui tutti i dettagli dell'intervento..."></textarea>
+                
                 <button class="vsp-button" onclick="addReport()">Invia Rapporto</button>
             </div>
             <table>
                 <thead>
                     <tr>
                         <th>Data</th>
+                        <th>Agente</th>
                         <th>Soggetto</th>
-                        <th>Reato</th>
+                        <th>Categoria</th>
+                        <th>Dettagli</th>
                     </tr>
                 </thead>
                 <tbody id="reportList">
-                    <tr>
-                        <td>19/02/2026</td>
-                        <td>Sospetto Ignoto</td>
-                        <td>Guida Pericolosa</td>
-                    </tr>
                 </tbody>
             </table>
+        </div>
+
+        <div id="stats" class="section">
+            <h2>TOTALE ORE SETTIMANALI AGENTI</h2>
+            <div class="card">
+                <table id="hoursTable">
+                    <thead>
+                        <tr>
+                            <th>Nominativo Agente</th>
+                            <th>Totale Ore Accumulate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="radio" class="section">
@@ -171,12 +208,22 @@
             btn.classList.add('active');
         }
 
-        // Timer e Duty
+        // Logica Ore e Duty
         let duty = false;
         let seconds = 0;
         let timerInterval;
+        let officerStats = {}; // Database ore
 
         function toggleDuty() {
+            const name = document.getElementById('officerName').value;
+            const surname = document.getElementById('officerSurname').value;
+
+            if(!name || !surname) {
+                alert("ERRORE: Inserire Nome e Cognome per procedere alla timbratura.");
+                return;
+            }
+
+            const fullName = name + " " + surname;
             duty = !duty;
             const btn = document.getElementById('dutyBtn');
             const label = document.getElementById('dutyLabel');
@@ -184,7 +231,7 @@
             if(duty) {
                 btn.innerText = "Timbra Uscita";
                 btn.classList.add('off');
-                label.innerText = "IN SERVIZIO";
+                label.innerText = "IN SERVIZIO - " + fullName;
                 label.style.color = "#00ff00";
                 timerInterval = setInterval(() => {
                     seconds++;
@@ -194,6 +241,11 @@
                     document.getElementById('timer').innerText = `${h}:${m}:${s}`;
                 }, 1000);
             } else {
+                // Salva ore prima di resettare
+                if(!officerStats[fullName]) officerStats[fullName] = 0;
+                officerStats[fullName] += seconds;
+                updateHoursTable();
+
                 btn.innerText = "Timbra Entrata";
                 btn.classList.remove('off');
                 label.innerText = "OFF-DUTY";
@@ -204,17 +256,38 @@
             }
         }
 
+        function updateHoursTable() {
+            const tbody = document.querySelector('#hoursTable tbody');
+            tbody.innerHTML = "";
+            for (let agent in officerStats) {
+                let h = (officerStats[agent] / 3600).toFixed(2);
+                tbody.innerHTML += `<tr><td>${agent}</td><td>${h} Ore</td></tr>`;
+            }
+        }
+
         // Funzione Aggiungi Rapporto
         function addReport() {
-            const name = document.getElementById('repName').value;
+            const agentName = document.getElementById('officerName').value + " " + document.getElementById('officerSurname').value;
+            const subName = document.getElementById('repName').value;
+            const cat = document.getElementById('repCategory').value;
             const crime = document.getElementById('repCrime').value;
             const date = new Date().toLocaleDateString();
             
-            if(name && crime) {
-                const row = `<tr><td>${date}</td><td>${name}</td><td>${crime}</td></tr>`;
+            if(subName && crime && agentName.trim() !== "") {
+                const row = `<tr>
+                    <td>${date}</td>
+                    <td>${agentName}</td>
+                    <td>${subName}</td>
+                    <td>${cat}</td>
+                    <td>${crime}</td>
+                </tr>`;
                 document.getElementById('reportList').innerHTML += row;
+                
+                // Reset campi
                 document.getElementById('repName').value = "";
                 document.getElementById('repCrime').value = "";
+            } else {
+                alert("Compila tutti i dettagli e assicurati di aver inserito il tuo nome nella Dashboard.");
             }
         }
 
