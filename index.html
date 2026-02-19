@@ -88,6 +88,19 @@
             width: 100%; background: #111; border: 1px solid var(--vsp-gold);
             color: white; padding: 8px; margin: 10px 0; box-sizing: border-box;
         }
+
+        .code-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .code-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px;
+            border-left: 3px solid var(--vsp-gold);
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -128,11 +141,45 @@
         <div id="mdc" class="section">
             <h2>DATABASE CENTRALE VIKTORIAN</h2>
             <div class="card">
-                <label>Ricerca per Targa o Nome Civile:</label>
-                <input type="text" id="dbInput" placeholder="Esempio: AB123CD o Mario Rossi">
-                <button class="vsp-button" onclick="dbSearch()">Interroga Sistema</button>
-                <div id="dbResult" style="margin-top: 20px;"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Nome Sospetto:</label>
+                        <input type="text" id="dbName" placeholder="Nome Completo">
+                    </div>
+                    <div>
+                        <label>Targa Veicolo:</label>
+                        <input type="text" id="dbPlate" placeholder="ABC 123">
+                    </div>
+                    <div>
+                        <label>Connotati/Modello Auto:</label>
+                        <input type="text" id="dbDetails" placeholder="es: Cicatrice, SUV Nero">
+                    </div>
+                    <div>
+                        <label>Pericolosità:</label>
+                        <select id="dbDanger">
+                            <option>Bassa</option>
+                            <option>Media</option>
+                            <option style="color:red">ALTA (Armato)</option>
+                        </select>
+                    </div>
+                </div>
+                <label>Note Investigative:</label>
+                <textarea id="dbNotes" rows="3" placeholder="Aggiungi note..."></textarea>
+                <button class="vsp-button" onclick="addToMDC()">Aggiorna Archivio Sospetti</button>
             </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Soggetto</th>
+                        <th>Targa</th>
+                        <th>Dettagli</th>
+                        <th>Pericolo</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody id="mdcList">
+                </tbody>
+            </table>
         </div>
 
         <div id="reports" class="section">
@@ -188,12 +235,37 @@
         </div>
 
         <div id="radio" class="section">
-            <h2>CODICI VIKTORIAN STATE</h2>
+            <h2>10-CODE VIKTORIAN STATE POLICE</h2>
             <div class="card">
+                <div class="code-grid">
+                    <div class="code-item"><strong>10-1:</strong> Segnale scarso</div>
+                    <div class="code-item"><strong>10-2:</strong> Segnale buono</div>
+                    <div class="code-item"><strong>10-3:</strong> Cessare trasmissioni</div>
+                    <div class="code-item"><strong>10-4:</strong> Ricevuto / Affermativo</div>
+                    <div class="code-item"><strong>10-6:</strong> Occupato</div>
+                    <div class="code-item"><strong>10-7:</strong> Fuori servizio</div>
+                    <div class="code-item"><strong>10-8:</strong> In servizio</div>
+                    <div class="code-item"><strong>10-9:</strong> Ripetere</div>
+                    <div class="code-item"><strong>10-10:</strong> Lite in corso</div>
+                    <div class="code-item"><strong>10-12:</strong> Presenza di civili</div>
+                    <div class="code-item"><strong>10-13:</strong> Situazione meteo/strade</div>
+                    <div class="code-item"><strong>10-19:</strong> Ritorno in caserma</div>
+                    <div class="code-item"><strong>10-20:</strong> Posizione attuale</div>
+                    <div class="code-item"><strong>10-22:</strong> Ignorare ultimo messaggio</div>
+                    <div class="code-item"><strong>10-23:</strong> Arrivato sul posto</div>
+                    <div class="code-item"><strong>10-31:</strong> Reato in corso</div>
+                    <div class="code-item"><strong>10-32:</strong> Persona armata</div>
+                    <div class="code-item"><strong>10-70:</strong> Incendio segnalato</div>
+                    <div class="code-item"><strong>10-80:</strong> Inseguimento attivo</div>
+                    <div class="code-item"><strong>10-97:</strong> Arrivo sul posto</div>
+                    <div class="code-item"><strong>10-98:</strong> Operazione conclusa</div>
+                    <div class="code-item" style="border-left-color: var(--vsp-red);"><strong>10-99:</strong> Agente in pericolo/SOS</div>
+                </div>
+                <h3 style="margin-top: 25px; border-bottom: 1px solid var(--vsp-gold);">CODICI DI RISPOSTA</h3>
                 <p><strong>CODICE 1:</strong> Risposta lenta (niente luci/sirene)</p>
-                <p><strong>CODICE 2:</strong> Risposta urgente (luci, niente sirene)</p>
+                <p><strong>CODICE 2:</strong> Risposta urgente (luci attive, niente sirene)</p>
                 <p><strong>CODICE 3:</strong> Emergenza Massima (tutto attivo)</p>
-                <p><strong>10-99:</strong> Agente a terra / Supporto immediato</p>
+                <p><strong>CODICE 4:</strong> Situazione sotto controllo</p>
             </div>
         </div>
 
@@ -241,7 +313,6 @@
                     document.getElementById('timer').innerText = `${h}:${m}:${s}`;
                 }, 1000);
             } else {
-                // Salva ore prima di resettare
                 if(!officerStats[fullName]) officerStats[fullName] = 0;
                 officerStats[fullName] += seconds;
                 updateHoursTable();
@@ -265,15 +336,45 @@
             }
         }
 
+        // Funzione Database Sospetti
+        function addToMDC() {
+            const name = document.getElementById('dbName').value;
+            const plate = document.getElementById('dbPlate').value;
+            const details = document.getElementById('dbDetails').value;
+            const danger = document.getElementById('dbDanger').value;
+            const notes = document.getElementById('dbNotes').value;
+
+            if(name || plate) {
+                const row = `<tr>
+                    <td>${name}</td>
+                    <td>${plate}</td>
+                    <td>${details}</td>
+                    <td>${danger}</td>
+                    <td>${notes}</td>
+                </tr>`;
+                document.getElementById('mdcList').innerHTML += row;
+                
+                // Clear inputs
+                document.getElementById('dbName').value = "";
+                document.getElementById('dbPlate').value = "";
+                document.getElementById('dbDetails').value = "";
+                document.getElementById('dbNotes').value = "";
+            } else {
+                alert("Inserire almeno Nome o Targa.");
+            }
+        }
+
         // Funzione Aggiungi Rapporto
         function addReport() {
-            const agentName = document.getElementById('officerName').value + " " + document.getElementById('officerSurname').value;
+            const nameField = document.getElementById('officerName').value;
+            const surnameField = document.getElementById('officerSurname').value;
+            const agentName = nameField + " " + surnameField;
             const subName = document.getElementById('repName').value;
             const cat = document.getElementById('repCategory').value;
             const crime = document.getElementById('repCrime').value;
             const date = new Date().toLocaleDateString();
             
-            if(subName && crime && agentName.trim() !== "") {
+            if(subName && crime && nameField.trim() !== "") {
                 const row = `<tr>
                     <td>${date}</td>
                     <td>${agentName}</td>
@@ -283,20 +384,10 @@
                 </tr>`;
                 document.getElementById('reportList').innerHTML += row;
                 
-                // Reset campi
                 document.getElementById('repName').value = "";
                 document.getElementById('repCrime').value = "";
             } else {
                 alert("Compila tutti i dettagli e assicurati di aver inserito il tuo nome nella Dashboard.");
-            }
-        }
-
-        // Ricerca Database
-        function dbSearch() {
-            const query = document.getElementById('dbInput').value;
-            const res = document.getElementById('dbResult');
-            if(query) {
-                res.innerHTML = `<p style="border: 1px dashed var(--vsp-gold); padding: 10px;">🔍 Ricerca per <strong>${query}</strong>...<br><span style="color:var(--vsp-red)">ATTENZIONE: Soggetto con porto d'armi revocato.</span></p>`;
             }
         }
     </script>
