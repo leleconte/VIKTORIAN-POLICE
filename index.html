@@ -13,16 +13,19 @@
             --text: #ffffff;
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            font-family: 'Courier New', Courier, monospace; /* Look da terminale di polizia */
+            font-family: 'Courier New', Courier, monospace;
             background-color: var(--vsp-dark);
             color: var(--text);
             margin: 0;
             display: flex;
             height: 100vh;
+            overflow: hidden;
         }
 
-        /* Sidebar */
+        /* Sidebar Responsive */
         .sidebar {
             width: 280px;
             background-color: var(--vsp-blue);
@@ -30,6 +33,8 @@
             display: flex;
             flex-direction: column;
             padding: 20px 0;
+            flex-shrink: 0;
+            transition: 0.3s;
         }
 
         .header-logo {
@@ -42,6 +47,12 @@
         .header-logo h1 { font-size: 1.2rem; color: var(--vsp-gold); margin: 0; }
         .header-logo p { font-size: 0.7rem; margin-top: 5px; text-transform: uppercase; }
 
+        .nav-links-container {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
         .nav-link {
             padding: 15px 25px;
             cursor: pointer;
@@ -49,13 +60,20 @@
             border-left: 4px solid transparent;
             text-transform: uppercase;
             font-weight: bold;
+            white-space: nowrap;
         }
 
         .nav-link:hover { background: rgba(197, 160, 89, 0.2); }
         .nav-link.active { border-left: 4px solid var(--vsp-gold); background: rgba(197, 160, 89, 0.1); }
 
-        /* Contenuto */
-        .content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        /* Contenuto principale */
+        .content { 
+            flex-grow: 1; 
+            padding: 30px; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+
         .section { display: none; }
         .section.active { display: block; }
 
@@ -72,26 +90,37 @@
             background: var(--vsp-gold);
             color: black;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
+            width: 100%; /* Ottimale per mobile */
+            margin-top: 10px;
         }
 
         .vsp-button.off { background: var(--vsp-red); color: white; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        /* Tabelle Responsive */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 20px;
+            border: 1px solid #444;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
         th, td { border: 1px solid #444; padding: 12px; text-align: left; }
-        th { background: var(--vsp-blue); color: var(--vsp-gold); }
+        th { background: var(--vsp-blue); color: var(--vsp-gold); position: sticky; top: 0; }
 
         input, select, textarea {
             width: 100%; background: #111; border: 1px solid var(--vsp-gold);
-            color: white; padding: 8px; margin: 10px 0; box-sizing: border-box;
+            color: white; padding: 12px; margin: 8px 0; box-sizing: border-box;
+            font-family: inherit;
         }
 
         .code-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 10px;
             margin-top: 15px;
         }
@@ -100,6 +129,43 @@
             padding: 8px;
             border-left: 3px solid var(--vsp-gold);
             font-size: 0.85rem;
+        }
+
+        /* MEDIA QUERIES PER SMARTPHONE */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid var(--vsp-gold);
+                padding: 10px 0;
+            }
+
+            .header-logo { margin-bottom: 5px; padding: 5px; }
+            .header-logo p { display: none; }
+
+            .nav-links-container {
+                flex-direction: row;
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+            .nav-links-container::-webkit-scrollbar { display: none; }
+
+            .nav-link {
+                padding: 10px 15px;
+                font-size: 0.75rem;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+            }
+            .nav-link.active { border-left: none; border-bottom: 3px solid var(--vsp-gold); }
+
+            .content { padding: 15px; }
+            
+            .card { padding: 15px; }
+            
+            h2 { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -110,11 +176,13 @@
             <h1>VIKTORIAN STATE</h1>
             <p>Police Department</p>
         </div>
-        <div class="nav-link active" onclick="nav('home', this)">🏠 Dashboard</div>
-        <div class="nav-link" onclick="nav('mdc', this)">📂 Database Sospetti</div>
-        <div class="nav-link" onclick="nav('reports', this)">📝 Registro Verbali</div>
-        <div class="nav-link" onclick="nav('stats', this)">📊 Archivio Ore</div>
-        <div class="nav-link" onclick="nav('radio', this)">📟 Comunicazioni</div>
+        <div class="nav-links-container">
+            <div class="nav-link active" onclick="nav('home', this)">🏠 Dashboard</div>
+            <div class="nav-link" onclick="nav('mdc', this)">📂 Database</div>
+            <div class="nav-link" onclick="nav('reports', this)">📝 Verbali</div>
+            <div class="nav-link" onclick="nav('stats', this)">📊 Archivio</div>
+            <div class="nav-link" onclick="nav('radio', this)">📟 Radio</div>
+        </div>
     </div>
 
     <div class="content">
@@ -122,26 +190,28 @@
         <div id="home" class="section active">
             <h2>STATO OPERATIVO</h2>
             <div class="card">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1; min-width: 140px;">
                         <label>Nome Agente:</label>
                         <input type="text" id="officerName" placeholder="Es: Mario">
                     </div>
-                    <div style="flex: 1;">
+                    <div style="flex: 1; min-width: 140px;">
                         <label>Cognome Agente:</label>
                         <input type="text" id="officerSurname" placeholder="Es: Rossi">
                     </div>
                 </div>
-                <p>Status: <span id="dutyLabel">OFF-DUTY</span></p>
-                <p>Tempo in servizio: <span id="timer">00:00:00</span></p>
-                <button id="dutyBtn" class="vsp-button" onclick="toggleDuty()">Timbra Entrata</button>
+                <div style="text-align: center;">
+                    <p>Status: <span id="dutyLabel" style="font-weight: bold; color: var(--vsp-red);">OFF-DUTY</span></p>
+                    <p>Tempo in servizio: <br><span id="timer" style="font-size: 1.5rem; font-weight: bold;">00:00:00</span></p>
+                    <button id="dutyBtn" class="vsp-button" onclick="toggleDuty()">Timbra Entrata</button>
+                </div>
             </div>
         </div>
 
         <div id="mdc" class="section">
             <h2>DATABASE CENTRALE VIKTORIAN</h2>
             <div class="card">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
                     <div>
                         <label>Nome Sospetto:</label>
                         <input type="text" id="dbName" placeholder="Nome Completo">
@@ -152,7 +222,7 @@
                     </div>
                     <div>
                         <label>Connotati/Modello Auto:</label>
-                        <input type="text" id="dbDetails" placeholder="es: Cicatrice, SUV Nero">
+                        <input type="text" id="dbDetails" placeholder="SUV Nero">
                     </div>
                     <div>
                         <label>Pericolosità:</label>
@@ -167,19 +237,20 @@
                 <textarea id="dbNotes" rows="3" placeholder="Aggiungi note..."></textarea>
                 <button class="vsp-button" onclick="addToMDC()">Aggiorna Archivio Sospetti</button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Soggetto</th>
-                        <th>Targa</th>
-                        <th>Dettagli</th>
-                        <th>Pericolo</th>
-                        <th>Note</th>
-                    </tr>
-                </thead>
-                <tbody id="mdcList">
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Soggetto</th>
+                            <th>Targa</th>
+                            <th>Dettagli</th>
+                            <th>Pericolo</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mdcList"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="reports" class="section">
@@ -195,42 +266,44 @@
                     <option>Possesso di Sostanze</option>
                     <option>Rapina/Furto</option>
                     <option>Resistenza a Pubblico Ufficiale</option>
-                    <option>Altro (Specificare sotto)</option>
+                    <option>Altro</option>
                 </select>
 
-                <label>Dettagli Intervento (Descrizione libera):</label>
+                <label>Dettagli Intervento:</label>
                 <textarea id="repCrime" rows="5" placeholder="Inserire qui tutti i dettagli dell'intervento..."></textarea>
                 
                 <button class="vsp-button" onclick="addReport()">Invia Rapporto</button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Agente</th>
-                        <th>Soggetto</th>
-                        <th>Categoria</th>
-                        <th>Dettagli</th>
-                    </tr>
-                </thead>
-                <tbody id="reportList">
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Agente</th>
+                            <th>Soggetto</th>
+                            <th>Categoria</th>
+                            <th>Dettagli</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportList"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="stats" class="section">
             <h2>TOTALE ORE SETTIMANALI AGENTI</h2>
             <div class="card">
-                <table id="hoursTable">
-                    <thead>
-                        <tr>
-                            <th>Nominativo Agente</th>
-                            <th>Totale Ore Accumulate</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table id="hoursTable">
+                        <thead>
+                            <tr>
+                                <th>Nominativo Agente</th>
+                                <th>Totale Ore Accumulate</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -239,33 +312,19 @@
             <div class="card">
                 <div class="code-grid">
                     <div class="code-item"><strong>10-1:</strong> Segnale scarso</div>
-                    <div class="code-item"><strong>10-2:</strong> Segnale buono</div>
-                    <div class="code-item"><strong>10-3:</strong> Cessare trasmissioni</div>
-                    <div class="code-item"><strong>10-4:</strong> Ricevuto / Affermativo</div>
-                    <div class="code-item"><strong>10-6:</strong> Occupato</div>
+                    <div class="code-item"><strong>10-4:</strong> Ricevuto</div>
                     <div class="code-item"><strong>10-7:</strong> Fuori servizio</div>
                     <div class="code-item"><strong>10-8:</strong> In servizio</div>
-                    <div class="code-item"><strong>10-9:</strong> Ripetere</div>
-                    <div class="code-item"><strong>10-10:</strong> Lite in corso</div>
-                    <div class="code-item"><strong>10-12:</strong> Presenza di civili</div>
-                    <div class="code-item"><strong>10-13:</strong> Situazione meteo/strade</div>
-                    <div class="code-item"><strong>10-19:</strong> Ritorno in caserma</div>
-                    <div class="code-item"><strong>10-20:</strong> Posizione attuale</div>
-                    <div class="code-item"><strong>10-22:</strong> Ignorare ultimo messaggio</div>
-                    <div class="code-item"><strong>10-23:</strong> Arrivato sul posto</div>
+                    <div class="code-item"><strong>10-20:</strong> Posizione</div>
                     <div class="code-item"><strong>10-31:</strong> Reato in corso</div>
                     <div class="code-item"><strong>10-32:</strong> Persona armata</div>
-                    <div class="code-item"><strong>10-70:</strong> Incendio segnalato</div>
-                    <div class="code-item"><strong>10-80:</strong> Inseguimento attivo</div>
-                    <div class="code-item"><strong>10-97:</strong> Arrivo sul posto</div>
-                    <div class="code-item"><strong>10-98:</strong> Operazione conclusa</div>
-                    <div class="code-item" style="border-left-color: var(--vsp-red);"><strong>10-99:</strong> Agente in pericolo/SOS</div>
+                    <div class="code-item"><strong>10-80:</strong> Inseguimento</div>
+                    <div class="code-item" style="border-left-color: var(--vsp-red);"><strong>10-99:</strong> SOS Agente</div>
                 </div>
-                <h3 style="margin-top: 25px; border-bottom: 1px solid var(--vsp-gold);">CODICI DI RISPOSTA</h3>
-                <p><strong>CODICE 1:</strong> Risposta lenta (niente luci/sirene)</p>
-                <p><strong>CODICE 2:</strong> Risposta urgente (luci attive, niente sirene)</p>
-                <p><strong>CODICE 3:</strong> Emergenza Massima (tutto attivo)</p>
-                <p><strong>CODICE 4:</strong> Situazione sotto controllo</p>
+                <h3 style="margin-top: 25px; border-bottom: 1px solid var(--vsp-gold); font-size: 1rem;">RISPOSTA OPERATIVA</h3>
+                <p><strong>COD 1:</strong> Risposta normale</p>
+                <p><strong>COD 2:</strong> Luci attive</p>
+                <p><strong>COD 3:</strong> Luci e Sirene (Emergenza)</p>
             </div>
         </div>
 
@@ -278,20 +337,25 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(section).classList.add('active');
             btn.classList.add('active');
+            
+            // Su mobile chiude la visuale (scrolling) dopo il click
+            if(window.innerWidth <= 768) {
+                window.scrollTo(0,0);
+            }
         }
 
         // Logica Ore e Duty
         let duty = false;
         let seconds = 0;
         let timerInterval;
-        let officerStats = {}; // Database ore
+        let officerStats = {};
 
         function toggleDuty() {
             const name = document.getElementById('officerName').value;
             const surname = document.getElementById('officerSurname').value;
 
             if(!name || !surname) {
-                alert("ERRORE: Inserire Nome e Cognome per procedere alla timbratura.");
+                alert("ERRORE: Inserire Nome e Cognome per procedere.");
                 return;
             }
 
@@ -336,7 +400,6 @@
             }
         }
 
-        // Funzione Database Sospetti
         function addToMDC() {
             const name = document.getElementById('dbName').value;
             const plate = document.getElementById('dbPlate').value;
@@ -353,8 +416,6 @@
                     <td>${notes}</td>
                 </tr>`;
                 document.getElementById('mdcList').innerHTML += row;
-                
-                // Clear inputs
                 document.getElementById('dbName').value = "";
                 document.getElementById('dbPlate').value = "";
                 document.getElementById('dbDetails').value = "";
@@ -364,7 +425,6 @@
             }
         }
 
-        // Funzione Aggiungi Rapporto
         function addReport() {
             const nameField = document.getElementById('officerName').value;
             const surnameField = document.getElementById('officerSurname').value;
@@ -383,11 +443,10 @@
                     <td>${crime}</td>
                 </tr>`;
                 document.getElementById('reportList').innerHTML += row;
-                
                 document.getElementById('repName').value = "";
                 document.getElementById('repCrime').value = "";
             } else {
-                alert("Compila tutti i dettagli e assicurati di aver inserito il tuo nome nella Dashboard.");
+                alert("Compila i dettagli e assicurati di aver inserito il tuo nome in Dashboard.");
             }
         }
     </script>
